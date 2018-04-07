@@ -25,9 +25,11 @@ This was an attempt to create a graphical fix for Daiblo 1 that does absolutely 
 
 ## Usage
 
-Run the game with command line options
+~~Run the game with command line options
 * /ddrawlog to write debug messages to ddraw_debug.log
-* /ddrawdebug to write debug messages to a console
+* /ddrawdebug to write debug messages to a console~~
+
+Command line parameters are currently broken, requires code change to enable debug logging.
 
 Press the ~ key to open the in-game graphics setting menu. Use the arrow keys to navigate/change settings and enter to apply. Escape will exit the menu without applying settings.
 
