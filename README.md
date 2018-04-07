@@ -25,9 +25,9 @@ This was an attempt to create a graphical fix for Daiblo 1 that does absolutely 
 
 ## Usage
 
-~~Run the game with command line options
-* /ddrawlog to write debug messages to ddraw_debug.log
-* /ddrawdebug to write debug messages to a console~~
+<del>Run the game with command line options</del>
+* <del>/ddrawlog to write debug messages to ddraw_debug.log</del>
+* <del>/ddrawdebug to write debug messages to a console</del>
 
 Command line parameters are currently broken, requires code change to enable debug logging.
 
