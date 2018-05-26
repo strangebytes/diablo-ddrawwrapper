@@ -1006,7 +1006,7 @@ HRESULT __stdcall IDirectDrawSurfaceWrapper::SetOverlayPosition(LONG lX, LONG lY
 HRESULT __stdcall IDirectDrawSurfaceWrapper::SetPalette(LPDIRECTDRAWPALETTE lpDDPalette)
 {
 	char message[2048] = "\0";
-	sprintf_s(message, 2048, "lpDDPalette: 0x%x", lpDDPalette);
+	sprintf_s(message, 2048, "lpDDPalette: 0x%x", (UINT)lpDDPalette);
 	debugMessage(2, "IDirectDrawSurfaceWrapper::SetPalette", message);
 
 	// if lpDDPalette is NULL then detach the current palette

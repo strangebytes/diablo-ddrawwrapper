@@ -479,7 +479,7 @@ HRESULT __stdcall IDirectDrawWrapper::RestoreDisplayMode()
 HRESULT __stdcall IDirectDrawWrapper::SetCooperativeLevel(HWND in_hWnd, DWORD dwFlags)
 {
 	char message[2048] = "\0";
-	sprintf_s(message, 2048, "Completed in_hWnd: 0x%X, dwFlags: %d", in_hWnd, dwFlags);
+	sprintf_s(message, 2048, "Completed in_hWnd: 0x%X, dwFlags: %d", (UINT)in_hWnd, dwFlags);
 
 	if(in_hWnd == NULL) 
 	{
@@ -1333,16 +1333,16 @@ HRESULT IDirectDrawWrapper::Present()
 		int selectionLeft, selectionRight;
 
 		// Custom Diablo Logo
-		pos.x = (640 - menuSprites[17].right) / 2;
+		pos.x = (640 - menuSprites[17].right) / 2.0f;
 		pos.y = 3;
 		d3dSprite->Draw(menuTexture, &menuSprites[17], NULL, &pos, 0xFFFFFFFF);
 
 		// RESOLUTION
-		pos.x = (640 - menuSprites[11].right) / 2;
-		pos.y = menuLocations[0];
+		pos.x = (640 - menuSprites[11].right) / 2.0f;
+		pos.y = (float)menuLocations[0];
 		d3dSprite->Draw(menuTexture, &menuSprites[11], NULL, &pos, 0xFFFFFFFF);
 
-		pos.y = menuLocations[1];
+		pos.y = (float)menuLocations[1];
 		// Print display string
 		char temp[1024];
 		// If windowed selected
@@ -1353,7 +1353,7 @@ HRESULT IDirectDrawWrapper::Present()
 			sprintf_s(temp, 1024, "%dx%dx%d", fullscreenResolutions[menuFullscreenResolution].x, fullscreenResolutions[menuFullscreenResolution].y, fullscreenRefreshes[menuFullscreenResolution]);
 		// Step through resolution string and calculate string width for centering
 		int resolutionStringWidth = 0;
-		for(int i = 0; i < strlen(temp); i++)
+		for(UINT i = 0; i < strlen(temp); i++)
 		{
 			// If number
 			if(temp[i] != 'x')
@@ -1365,15 +1365,15 @@ HRESULT IDirectDrawWrapper::Present()
 				resolutionStringWidth += menuSprites[10].right - menuSprites[10].left;
 			}
 		}
-		pos.x = (640 - resolutionStringWidth) / 2;
+		pos.x = (640 - resolutionStringWidth) / 2.0f;
 		// Set location for menu selection marker
 		if(curMenu == 0)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + resolutionStringWidth + 10;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + resolutionStringWidth + 10;
 		}
 		// Daw resolution string
-		for(int i = 0; i < strlen(temp); i++)
+		for(UINT i = 0; i < strlen(temp); i++)
 		{
 			// If number
 			if(temp[i] != 'x')
@@ -1389,13 +1389,13 @@ HRESULT IDirectDrawWrapper::Present()
 		}
 
 		// FULLSCREEN:
-		pos.x = (640 - (menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2;
-		pos.y = menuLocations[2];
+		pos.x = (640 - (menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2.0f;
+		pos.y = (float)menuLocations[2];
 		// Set location for menu selection marker
 		if(curMenu == 1)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 20;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 20;
 		}
 		d3dSprite->Draw(menuTexture, &menuSprites[12], NULL, &pos, 0xFFFFFFFF);
 		// OFF
@@ -1412,13 +1412,13 @@ HRESULT IDirectDrawWrapper::Present()
 		}
 		
 		// VSYNC:
-		pos.x = (640 - (menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2;
-		pos.y = menuLocations[3];
+		pos.x = (640 - (menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2.0f;
+		pos.y = (float)menuLocations[3];
 		// Set location for menu selection marker
 		if(curMenu == 2)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 20;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 20;
 		}
 		d3dSprite->Draw(menuTexture, &menuSprites[13], NULL, &pos, 0xFFFFFFFF);
 		// OFF
@@ -1435,13 +1435,13 @@ HRESULT IDirectDrawWrapper::Present()
 		}
 
 		// ACCEPT
-		pos.x = (640 - menuSprites[14].right) / 2;
-		pos.y = menuLocations[4];
+		pos.x = (640 - menuSprites[14].right) / 2.0f;
+		pos.y = (float)menuLocations[4];
 		// Set location for menu selection marker
 		if(curMenu == 3)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + menuSprites[14].right + 10;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + menuSprites[14].right + 10;
 		}
 		d3dSprite->Draw(menuTexture, &menuSprites[14], NULL, &pos, 0xFFFFFFFF);
 
@@ -1454,10 +1454,10 @@ HRESULT IDirectDrawWrapper::Present()
 		curMenuFrame++;
 		if(curMenuFrame > 7) curMenuFrame = 0;
 
-		pos.x = selectionLeft;
-		pos.y = menuLocations[curMenu + 1] - 5;
+		pos.x = (float)selectionLeft;
+		pos.y = menuLocations[curMenu + 1] - 5.0f;
 		d3dSprite->Draw(menuTexture,&sLoc,NULL,&pos,0xFFFFFFFF);
-		pos.x = selectionRight;
+		pos.x = (float)selectionRight;
 		d3dSprite->Draw(menuTexture,&sLoc,NULL,&pos,0xFFFFFFFF);
 
 		// End sprite drawing

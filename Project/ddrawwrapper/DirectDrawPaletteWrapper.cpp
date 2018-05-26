@@ -116,7 +116,7 @@ HRESULT __stdcall IDirectDrawPaletteWrapper::SetEntries(DWORD dwFlags, DWORD dwS
 	memcpy(&(rawPalette[dwStartingEntry]), lpEntries, sizeof(PALETTEENTRY) * min(dwCount, entryCount - dwStartingEntry));
 
 	// Translate new raw pallete entries to RGB(make sure not to go off the end of the memory)
-	for(int i = dwStartingEntry; i < min(dwStartingEntry + dwCount, entryCount - dwStartingEntry); i++)
+	for(UINT i = dwStartingEntry; i < min(dwStartingEntry + dwCount, entryCount - dwStartingEntry); i++)
 	{
 		// Translate the raw palette to ARGB
 		if(hasAlpha)
