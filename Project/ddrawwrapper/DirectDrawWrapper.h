@@ -132,6 +132,9 @@ private:
 	LPDIRECT3DTEXTURE9 surfaceTexture;
 	LPDIRECT3DVERTEXBUFFER9 vertexBuffer;
 
+	LPDIRECT3DTEXTURE9 lockTextureMap[8] = { NULL };
+	BYTE TextureMapLoc = 0;
+
 	LPD3DXSPRITE d3dSprite;
 	LPDIRECT3DTEXTURE9 menuTexture;
 	int curMenuFrame;
@@ -305,8 +308,7 @@ public:
 	~IDirectDrawSurfaceWrapper();
 
 	// Helper functions
-	HRESULT WrapperInitialize(LPDDSURFACEDESC lpDDSurfaceDesc, DWORD displayModeWidth, DWORD displayModeHeight, DWORD displayWidth, DWORD displayHeight);
-	BOOL ReInitialize(DWORD displayWidth, DWORD displayHeight);
+	HRESULT WrapperInitialize(LPDIRECT3DTEXTURE9 *lpTexture, LPDDSURFACEDESC lpDDSurfaceDesc, DWORD displayModeWidth, DWORD displayModeHeight, DWORD displayWidth, DWORD displayHeight);
 
 	// RGB video memory
 	UINT32 *rgbVideoMem;
@@ -319,7 +321,10 @@ private:
 	IDirectDrawWrapper *ddrawParent;
 	// Associated palette
 	IDirectDrawPaletteWrapper *attachedPalette;
-	
+	// Lock texture
+	LPDIRECT3DTEXTURE9 *surfaceTexture;
+	LPDIRECT3DTEXTURE9 lastSurfaceTexture;
+
 	// Surface description
 	DDSURFACEDESC surfaceDesc;
 	LONG surfaceWidth;
@@ -331,6 +336,10 @@ private:
 
 	// Virtual video memory
 	BYTE *rawVideoMem;
+	BYTE *lockVideoMem;
+
+	// Frame counter
+	BYTE frameCounter;
 };
 
 /*

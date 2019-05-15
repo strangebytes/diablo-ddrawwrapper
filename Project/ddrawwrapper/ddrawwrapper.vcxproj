@@ -99,7 +99,6 @@
     <ClCompile Include="DirectDrawWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ddraw.h" />
     <ClInclude Include="DirectDrawWrapper.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

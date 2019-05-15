@@ -123,9 +123,10 @@ HRESULT __stdcall IDirectDrawWrapper::CreateSurface(LPDDSURFACEDESC lpDDSurfaceD
 	lpAttachedSurface = new IDirectDrawSurfaceWrapper(this);
 	if(lpAttachedSurface == NULL) return DDERR_OUTOFMEMORY; //OOM Fail
 	// Initialize the surface wrapper
-	HRESULT hr = lpAttachedSurface->WrapperInitialize(lpDDSurfaceDesc, displayModeWidth, displayModeHeight, displayWidth, displayHeight);
+	HRESULT hr = lpAttachedSurface->WrapperInitialize(&lockTextureMap[TextureMapLoc], lpDDSurfaceDesc, displayModeWidth, displayModeHeight, displayWidth, displayHeight);
 	// If fail then return result
 	if(hr != DD_OK) return hr;
+	TextureMapLoc = ++TextureMapLoc % 8;
 
 	// Set the address to the new object
 	*lplpDDSurface = (LPDIRECTDRAWSURFACE)lpAttachedSurface;
@@ -1100,7 +1101,7 @@ IDirectDrawWrapper::IDirectDrawWrapper()
 		}
 	}
 	// Default to fullscreen mode?
-	GetPrivateProfileString(TEXT("video"), TEXT("fullscreen"), TEXT("0"), temp, 1024, filename);
+	GetPrivateProfileString(TEXT("video"), TEXT("fullscreen"), TEXT("1"), temp, 1024, filename);
 	if(temp[0] == TEXT('1'))
 	{
 		isWindowed = false;
@@ -1120,8 +1121,8 @@ IDirectDrawWrapper::IDirectDrawWrapper()
 		displayWidth = displayWidthFullscreen;
 		displayHeight = displayHeightFullscreen;
 	}
-	GetPrivateProfileString(TEXT("video"), TEXT("vsync"), TEXT("1"), temp, 1024, filename);
-	if(temp[0] == TEXT('1'))
+	GetPrivateProfileString(TEXT("video"), TEXT("vsync"), TEXT("0"), temp, 1024, filename);
+	if(temp[0] == TEXT('0'))
 	{
 		vSync = false;
 	}
@@ -1792,6 +1793,16 @@ bool IDirectDrawWrapper::CreateD3DDevice()
 		vertexBuffer = NULL;
 	}
 
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (lockTextureMap[x] != NULL)
+		{
+			lockTextureMap[x]->Release();
+			lockTextureMap[x] = NULL;
+		}
+	}
+
 	// Release existing surface texture
 	if(surfaceTexture != NULL)
 	{
@@ -1982,6 +1993,16 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 		surfaceTexture = NULL;
 	}
 
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (lockTextureMap[x] != NULL)
+		{
+			lockTextureMap[x]->Release();
+			lockTextureMap[x] = NULL;
+		}
+	}
+
 	if(menuTexture != NULL)
 	{
 		menuTexture->Release();
@@ -1993,6 +2014,16 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 	{
 		debugMessage(0, "IDirectDrawWrapper::CreateSurfaceTexture","Unable to create surface texture");
 		return false;
+	}
+
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (d3d9Device->CreateTexture(640, 480, 0, D3DUSAGE_DYNAMIC, D3DFMT_L8, D3DPOOL_SYSTEMMEM, &lockTextureMap[x], NULL) != D3D_OK)
+		{
+			debugMessage(0, "IDirectDrawWrapper::CreateSurfaceTexture", "Unable to create lock texture");
+			return false;
+		}
 	}
 
 	// Set vertex shader
@@ -2107,11 +2138,26 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 // Helper function to reinitialize device
 bool IDirectDrawWrapper::ReinitDevice()
 {
+	// Wait until device is ready
+	do {
+		Sleep(100);
+	} while (d3d9Device->TestCooperativeLevel() == D3DERR_DEVICELOST);
+
 	// Release existing vertex buffer
 	if(vertexBuffer != NULL)
 	{
 		vertexBuffer->Release();
 		vertexBuffer = NULL;
+	}
+
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (lockTextureMap[x] != NULL)
+		{
+			lockTextureMap[x]->Release();
+			lockTextureMap[x] = NULL;
+		}
 	}
 
 	// Release existing surface texture
