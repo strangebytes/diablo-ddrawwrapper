@@ -2138,10 +2138,11 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 // Helper function to reinitialize device
 bool IDirectDrawWrapper::ReinitDevice()
 {
-	// Wait until device is ready
-	do {
-		Sleep(100);
-	} while (d3d9Device->TestCooperativeLevel() == D3DERR_DEVICELOST);
+	// Check if device is ready to be restored
+	if (d3d9Device->TestCooperativeLevel() == D3DERR_DEVICELOST)
+	{
+		return false;
+	}
 
 	// Release existing vertex buffer
 	if(vertexBuffer != NULL)
