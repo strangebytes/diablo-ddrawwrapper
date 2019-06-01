@@ -123,9 +123,10 @@ HRESULT __stdcall IDirectDrawWrapper::CreateSurface(LPDDSURFACEDESC lpDDSurfaceD
 	lpAttachedSurface = new IDirectDrawSurfaceWrapper(this);
 	if(lpAttachedSurface == NULL) return DDERR_OUTOFMEMORY; //OOM Fail
 	// Initialize the surface wrapper
-	HRESULT hr = lpAttachedSurface->WrapperInitialize(lpDDSurfaceDesc, displayModeWidth, displayModeHeight, displayWidth, displayHeight);
+	HRESULT hr = lpAttachedSurface->WrapperInitialize(&lockTextureMap[TextureMapLoc], lpDDSurfaceDesc, displayModeWidth, displayModeHeight, displayWidth, displayHeight);
 	// If fail then return result
 	if(hr != DD_OK) return hr;
+	TextureMapLoc = ++TextureMapLoc % 8;
 
 	// Set the address to the new object
 	*lplpDDSurface = (LPDIRECTDRAWSURFACE)lpAttachedSurface;
@@ -479,7 +480,7 @@ HRESULT __stdcall IDirectDrawWrapper::RestoreDisplayMode()
 HRESULT __stdcall IDirectDrawWrapper::SetCooperativeLevel(HWND in_hWnd, DWORD dwFlags)
 {
 	char message[2048] = "\0";
-	sprintf_s(message, 2048, "Completed in_hWnd: 0x%X, dwFlags: %d", in_hWnd, dwFlags);
+	sprintf_s(message, 2048, "Completed in_hWnd: 0x%X, dwFlags: %d", (UINT)in_hWnd, dwFlags);
 
 	if(in_hWnd == NULL) 
 	{
@@ -1100,7 +1101,7 @@ IDirectDrawWrapper::IDirectDrawWrapper()
 		}
 	}
 	// Default to fullscreen mode?
-	GetPrivateProfileString(TEXT("video"), TEXT("fullscreen"), TEXT("0"), temp, 1024, filename);
+	GetPrivateProfileString(TEXT("video"), TEXT("fullscreen"), TEXT("1"), temp, 1024, filename);
 	if(temp[0] == TEXT('1'))
 	{
 		isWindowed = false;
@@ -1120,8 +1121,8 @@ IDirectDrawWrapper::IDirectDrawWrapper()
 		displayWidth = displayWidthFullscreen;
 		displayHeight = displayHeightFullscreen;
 	}
-	GetPrivateProfileString(TEXT("video"), TEXT("vsync"), TEXT("1"), temp, 1024, filename);
-	if(temp[0] == TEXT('1'))
+	GetPrivateProfileString(TEXT("video"), TEXT("vsync"), TEXT("0"), temp, 1024, filename);
+	if(temp[0] == TEXT('0'))
 	{
 		vSync = false;
 	}
@@ -1333,16 +1334,16 @@ HRESULT IDirectDrawWrapper::Present()
 		int selectionLeft, selectionRight;
 
 		// Custom Diablo Logo
-		pos.x = (640 - menuSprites[17].right) / 2;
+		pos.x = (640 - menuSprites[17].right) / 2.0f;
 		pos.y = 3;
 		d3dSprite->Draw(menuTexture, &menuSprites[17], NULL, &pos, 0xFFFFFFFF);
 
 		// RESOLUTION
-		pos.x = (640 - menuSprites[11].right) / 2;
-		pos.y = menuLocations[0];
+		pos.x = (640 - menuSprites[11].right) / 2.0f;
+		pos.y = (float)menuLocations[0];
 		d3dSprite->Draw(menuTexture, &menuSprites[11], NULL, &pos, 0xFFFFFFFF);
 
-		pos.y = menuLocations[1];
+		pos.y = (float)menuLocations[1];
 		// Print display string
 		char temp[1024];
 		// If windowed selected
@@ -1353,7 +1354,7 @@ HRESULT IDirectDrawWrapper::Present()
 			sprintf_s(temp, 1024, "%dx%dx%d", fullscreenResolutions[menuFullscreenResolution].x, fullscreenResolutions[menuFullscreenResolution].y, fullscreenRefreshes[menuFullscreenResolution]);
 		// Step through resolution string and calculate string width for centering
 		int resolutionStringWidth = 0;
-		for(int i = 0; i < strlen(temp); i++)
+		for(UINT i = 0; i < strlen(temp); i++)
 		{
 			// If number
 			if(temp[i] != 'x')
@@ -1365,15 +1366,15 @@ HRESULT IDirectDrawWrapper::Present()
 				resolutionStringWidth += menuSprites[10].right - menuSprites[10].left;
 			}
 		}
-		pos.x = (640 - resolutionStringWidth) / 2;
+		pos.x = (640 - resolutionStringWidth) / 2.0f;
 		// Set location for menu selection marker
 		if(curMenu == 0)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + resolutionStringWidth + 10;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + resolutionStringWidth + 10;
 		}
 		// Daw resolution string
-		for(int i = 0; i < strlen(temp); i++)
+		for(UINT i = 0; i < strlen(temp); i++)
 		{
 			// If number
 			if(temp[i] != 'x')
@@ -1389,13 +1390,13 @@ HRESULT IDirectDrawWrapper::Present()
 		}
 
 		// FULLSCREEN:
-		pos.x = (640 - (menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2;
-		pos.y = menuLocations[2];
+		pos.x = (640 - (menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2.0f;
+		pos.y = (float)menuLocations[2];
 		// Set location for menu selection marker
 		if(curMenu == 1)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 20;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + menuSprites[12].right + (menuSprites[16].right - menuSprites[16].left) + 20;
 		}
 		d3dSprite->Draw(menuTexture, &menuSprites[12], NULL, &pos, 0xFFFFFFFF);
 		// OFF
@@ -1412,13 +1413,13 @@ HRESULT IDirectDrawWrapper::Present()
 		}
 		
 		// VSYNC:
-		pos.x = (640 - (menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2;
-		pos.y = menuLocations[3];
+		pos.x = (640 - (menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 10)) / 2.0f;
+		pos.y = (float)menuLocations[3];
 		// Set location for menu selection marker
 		if(curMenu == 2)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 20;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + menuSprites[13].right + (menuSprites[16].right - menuSprites[16].left) + 20;
 		}
 		d3dSprite->Draw(menuTexture, &menuSprites[13], NULL, &pos, 0xFFFFFFFF);
 		// OFF
@@ -1435,13 +1436,13 @@ HRESULT IDirectDrawWrapper::Present()
 		}
 
 		// ACCEPT
-		pos.x = (640 - menuSprites[14].right) / 2;
-		pos.y = menuLocations[4];
+		pos.x = (640 - menuSprites[14].right) / 2.0f;
+		pos.y = (float)menuLocations[4];
 		// Set location for menu selection marker
 		if(curMenu == 3)
 		{
-			selectionLeft = pos.x - 52;
-			selectionRight = pos.x + menuSprites[14].right + 10;
+			selectionLeft = (int)pos.x - 52;
+			selectionRight = (int)pos.x + menuSprites[14].right + 10;
 		}
 		d3dSprite->Draw(menuTexture, &menuSprites[14], NULL, &pos, 0xFFFFFFFF);
 
@@ -1454,10 +1455,10 @@ HRESULT IDirectDrawWrapper::Present()
 		curMenuFrame++;
 		if(curMenuFrame > 7) curMenuFrame = 0;
 
-		pos.x = selectionLeft;
-		pos.y = menuLocations[curMenu + 1] - 5;
+		pos.x = (float)selectionLeft;
+		pos.y = menuLocations[curMenu + 1] - 5.0f;
 		d3dSprite->Draw(menuTexture,&sLoc,NULL,&pos,0xFFFFFFFF);
-		pos.x = selectionRight;
+		pos.x = (float)selectionRight;
 		d3dSprite->Draw(menuTexture,&sLoc,NULL,&pos,0xFFFFFFFF);
 
 		// End sprite drawing
@@ -1792,6 +1793,16 @@ bool IDirectDrawWrapper::CreateD3DDevice()
 		vertexBuffer = NULL;
 	}
 
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (lockTextureMap[x] != NULL)
+		{
+			lockTextureMap[x]->Release();
+			lockTextureMap[x] = NULL;
+		}
+	}
+
 	// Release existing surface texture
 	if(surfaceTexture != NULL)
 	{
@@ -1982,6 +1993,16 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 		surfaceTexture = NULL;
 	}
 
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (lockTextureMap[x] != NULL)
+		{
+			lockTextureMap[x]->Release();
+			lockTextureMap[x] = NULL;
+		}
+	}
+
 	if(menuTexture != NULL)
 	{
 		menuTexture->Release();
@@ -1993,6 +2014,16 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 	{
 		debugMessage(0, "IDirectDrawWrapper::CreateSurfaceTexture","Unable to create surface texture");
 		return false;
+	}
+
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (d3d9Device->CreateTexture(640, 480, 0, D3DUSAGE_DYNAMIC, D3DFMT_L8, D3DPOOL_SYSTEMMEM, &lockTextureMap[x], NULL) != D3D_OK)
+		{
+			debugMessage(0, "IDirectDrawWrapper::CreateSurfaceTexture", "Unable to create lock texture");
+			return false;
+		}
 	}
 
 	// Set vertex shader
@@ -2107,11 +2138,27 @@ bool IDirectDrawWrapper::CreateSurfaceTexture()
 // Helper function to reinitialize device
 bool IDirectDrawWrapper::ReinitDevice()
 {
+	// Check if device is ready to be restored
+	if (d3d9Device->TestCooperativeLevel() == D3DERR_DEVICELOST)
+	{
+		return false;
+	}
+
 	// Release existing vertex buffer
 	if(vertexBuffer != NULL)
 	{
 		vertexBuffer->Release();
 		vertexBuffer = NULL;
+	}
+
+	// Release existing lock surfaces
+	for (int x = 0; x < 8; x++)
+	{
+		if (lockTextureMap[x] != NULL)
+		{
+			lockTextureMap[x]->Release();
+			lockTextureMap[x] = NULL;
+		}
 	}
 
 	// Release existing surface texture

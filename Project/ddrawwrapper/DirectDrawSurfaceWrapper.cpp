@@ -752,15 +752,30 @@ HRESULT __stdcall IDirectDrawSurfaceWrapper::Lock(LPRECT lpDestRect, LPDDSURFACE
 
 	char message[2048] = "\0";
 
+	lockVideoMem = NULL;
+	if (surfaceTexture && *surfaceTexture)
+	{
+		D3DLOCKED_RECT LockedRect;
+		if ((*surfaceTexture)->LockRect(0, &LockedRect, lpDestRect, 0) != D3D_OK)
+		{
+			return DDERR_GENERIC;
+		}
+		if (*surfaceTexture != lastSurfaceTexture)
+		{
+			memcpy(LockedRect.pBits, rawVideoMem, 640 * 480 * sizeof(BYTE));
+		}
+		lockVideoMem = (BYTE*)LockedRect.pBits;
+	}
+
     // Check for destination rect
 	//if(lpDestRect == NULL)
 	//{
 		// Copy desc to passed in desc
 		memcpy(lpDDSurfaceDesc, &surfaceDesc, sizeof(DDSURFACEDESC));
 		// Set video memory and pitch
-		lpDDSurfaceDesc->lpSurface = (LPVOID)rawVideoMem;
+		lpDDSurfaceDesc->lpSurface = lockVideoMem;
 		lpDDSurfaceDesc->dwFlags |= DDSD_LPSURFACE;
-		lpDDSurfaceDesc->lPitch = surfaceWidth;
+		lpDDSurfaceDesc->lPitch = 640;
 		lpDDSurfaceDesc->dwFlags |= DDSD_PITCH;
 		//sprintf_s(message, 2048, "INF IDirectDrawSurfaceWrapper::Lock lpDestRect: NULL");
 	//}
@@ -1006,7 +1021,7 @@ HRESULT __stdcall IDirectDrawSurfaceWrapper::SetOverlayPosition(LONG lX, LONG lY
 HRESULT __stdcall IDirectDrawSurfaceWrapper::SetPalette(LPDIRECTDRAWPALETTE lpDDPalette)
 {
 	char message[2048] = "\0";
-	sprintf_s(message, 2048, "lpDDPalette: 0x%x", lpDDPalette);
+	sprintf_s(message, 2048, "lpDDPalette: 0x%x", (UINT)lpDDPalette);
 	debugMessage(2, "IDirectDrawSurfaceWrapper::SetPalette", message);
 
 	// if lpDDPalette is NULL then detach the current palette
@@ -1061,9 +1076,19 @@ HRESULT __stdcall IDirectDrawSurfaceWrapper::Unlock(LPVOID lpRect)
 	// Always unlock full rect(fix)
 
 	// Translate all of raw video memory to rgb video memory with palette
-	for(long i = 0; i < surfaceWidth * surfaceHeight; i++)
+	if (!lockVideoMem)
 	{
-		rgbVideoMem[i] = attachedPalette->rgbPalette[rawVideoMem[i]];
+		return DDERR_GENERIC;
+	}
+
+	if (++frameCounter == 0)
+	{
+		memcpy(rawVideoMem, lockVideoMem, 640 * 480 * sizeof(BYTE));
+	}
+
+	for (long i = 0; i < 640 * 480; i++)
+	{
+		rgbVideoMem[i] = attachedPalette->rgbPalette[lockVideoMem[i]];
 	}
 
 	/*
@@ -1076,6 +1101,13 @@ HRESULT __stdcall IDirectDrawSurfaceWrapper::Unlock(LPVOID lpRect)
 	different destination rectangles, the pointer in lpRect links the calls to the 
 	IDirectDrawSurface7::Lock and IDirectDrawSurface7::Unlock methods. 
 	*/
+
+	if (surfaceTexture && *surfaceTexture)
+	{
+		(*surfaceTexture)->UnlockRect(0);
+		lastSurfaceTexture = *surfaceTexture;
+	}
+	lockVideoMem = NULL;
 
 	// Present the surface
 	if(!ddrawParent->Present())
@@ -1561,7 +1593,7 @@ IDirectDrawSurfaceWrapper::~IDirectDrawSurfaceWrapper()
 		rawVideoMem = NULL;
 	}
 	if(rgbVideoMem != NULL) {
-		delete rawVideoMem;
+		delete rgbVideoMem;
 		rgbVideoMem = NULL;
 	}
 
@@ -1571,39 +1603,8 @@ IDirectDrawSurfaceWrapper::~IDirectDrawSurfaceWrapper()
 	debugMessage(2, "IDirectDrawSurfaceWrapper::~IDirectDrawSurfaceWrapper", "Destroyed");
 }
 
-// Helper funtion to reallocate memory if display resolution changes
-BOOL IDirectDrawSurfaceWrapper::ReInitialize(DWORD displayWidth, DWORD displayHeight)
-{
-	char message[2048] = "\0";
-	
-	//store old memory pointer
-	BYTE* oldMem = rawVideoMem;
-	// Allocate new raw video memory to fit resolution
-	rawVideoMem = new BYTE[displayWidth * displayHeight];
-	if(rawVideoMem == NULL) 
-	{
-		debugMessage(0, "IDirectDrawSurfaceWrapper::ReInitialize", "Failed to allocate new raw video memory");
-		return false;
-	}
-	// Clear new video memory
-	ZeroMemory(rawVideoMem, displayWidth * displayHeight * sizeof(BYTE));
-	// If we have old memory
-	if(oldMem != NULL)
-	{
-		// Copy from old to new only in the area of the surface
-		memcpy(rawVideoMem, oldMem, surfaceWidth  * surfaceHeight);
-		// Delete old mem
-		delete oldMem;
-	}
-
-	sprintf_s(message, 2048, "displayWidth: %d, displayHeight: %d", displayWidth, displayHeight);
-	debugMessage(2, "IDirectDrawSurfaceWrapper::ReInitialize", message);
-
-	return true;
-}
-
 // Initialize wrapper function
-HRESULT IDirectDrawSurfaceWrapper::WrapperInitialize(LPDDSURFACEDESC lpDDSurfaceDesc, DWORD displayModeWidth, DWORD displayModeHeight, DWORD displayWidth, DWORD displayHeight)
+HRESULT IDirectDrawSurfaceWrapper::WrapperInitialize(LPDIRECT3DTEXTURE9 *lpTexture, LPDDSURFACEDESC lpDDSurfaceDesc, DWORD displayModeWidth, DWORD displayModeHeight, DWORD displayWidth, DWORD displayHeight)
 {
 	//set width and height
 	/*if(lpDDSurfaceDesc->dwFlags & DDSD_WIDTH)
@@ -1645,27 +1646,28 @@ HRESULT IDirectDrawSurfaceWrapper::WrapperInitialize(LPDDSURFACEDESC lpDDSurface
 	surfaceWidth = displayModeWidth;
 	surfaceHeight = displayModeHeight;
 
-	//Overallocate the memory to prevent access outside of memory range by the exe
-	//if(!ReInitialize(displayWidth, displayHeight)) return DDERR_OUTOFMEMORY;
-	//maximum supported resolution is 1920x1440
-	rawVideoMem = new BYTE[1920 * 1440];
+	surfaceTexture = lpTexture;
+	lockVideoMem = nullptr;
+
+	// Allocate virtual video memory RAW
+	rawVideoMem = new BYTE[640 * 480];
 	if(rawVideoMem == NULL)
 	{
 		debugMessage(0, "IDirectDrawSurfaceWrapper::WrapperInitialize", "Failed to allocate raw video memory");
 		return DDERR_OUTOFMEMORY;
 	}
-	// Clear raw memory
-	ZeroMemory(rawVideoMem, 1920 * 1440 * sizeof(BYTE));
+	// Clear rgb memory
+	ZeroMemory(rawVideoMem, 640 * 480 * sizeof(BYTE));
 
 	// Allocate virtual video memory RGB
-	rgbVideoMem = new UINT32[surfaceWidth * surfaceHeight];
+	rgbVideoMem = new UINT32[640 * 480];
 	if(rgbVideoMem == NULL) 
 	{
 		debugMessage(0, "IDirectDrawSurfaceWrapper::WrapperInitialize", "Failed to allocate rgb video memory");
 		return DDERR_OUTOFMEMORY;
 	}
 	// Clear rgb memory
-	ZeroMemory(rgbVideoMem, surfaceWidth * surfaceHeight * sizeof(UINT32));
+	ZeroMemory(rgbVideoMem, 640 * 480 * sizeof(UINT32));
 
 	// Copy surface description
 	memcpy(&surfaceDesc, lpDDSurfaceDesc, sizeof(DDSURFACEDESC));
