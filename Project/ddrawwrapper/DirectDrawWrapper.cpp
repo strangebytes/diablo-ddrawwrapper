@@ -1024,8 +1024,8 @@ IDirectDrawWrapper::IDirectDrawWrapper()
 	inMenu = false;
 	curMenu = 0;
     // Resolutions
-	windowedResolutions = new POINT[10];
-	windowedResolutionCount = 10;
+	windowedResolutions = new POINT[11];
+	windowedResolutionCount = 11;
 	windowedResolutions[0].x = 640;
 	windowedResolutions[0].y = 480;
 	windowedResolutions[1].x = 800;
@@ -1046,6 +1046,8 @@ IDirectDrawWrapper::IDirectDrawWrapper()
 	windowedResolutions[8].y = 1200;
 	windowedResolutions[9].x = 1920;
 	windowedResolutions[9].y = 1440;
+	windowedResolutions[10].x = 2560;
+	windowedResolutions[10].y = 1440;
 
 	fullscreenResolutionCount = 0;
 	fullscreenResolutions = NULL;
@@ -1878,7 +1880,7 @@ bool IDirectDrawWrapper::CreateD3DDevice()
 		}
 
 		// No modes above maximum size
-		if(d3ddispmode.Width < 1920 && d3ddispmode.Height < 1440) {
+		if(d3ddispmode.Width <= 2560 && d3ddispmode.Height <= 1440) {
 			fullscreenResolutions[fullscreenResolutionCount].x = d3ddispmode.Width;
 			fullscreenResolutions[fullscreenResolutionCount].y = d3ddispmode.Height;
 			fullscreenRefreshes[fullscreenResolutionCount] = d3ddispmode.RefreshRate;

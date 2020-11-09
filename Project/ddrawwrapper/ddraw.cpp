@@ -171,6 +171,31 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     return CallWindowProc(lpDD->lpPrevWndFunc, hwnd, message, wParam, lParam);
 }
 
+POINT mousePos;
+
+//A thread to bypass windows preventing hooks from modifying mouse position
+DWORD WINAPI setMousePosThread(LPVOID lpParam) {
+	SetCursorPos(mousePos.x, mousePos.y);
+	return 0;
+}
+
+LRESULT CALLBACK mouseHookProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	POINT p;
+	if (GetCursorPos(&p)) {
+		if (lpDD != NULL && !lpDD->isWindowed) {
+			mousePos.x = min(p.x, 640 - 1);
+			mousePos.y = min(p.y, 480 - 1);
+		}
+		if (mousePos.x != p.x || mousePos.y != p.y) {
+			long unsigned int nothing;
+			HANDLE threadID = CreateThread(NULL, 0, setMousePosThread, NULL, 0, &nothing);
+			CloseHandle(threadID);
+		}
+	}
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
 // Main dll entry
 BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
 {
@@ -228,6 +253,9 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpRese
 			}
 		}
 		LocalFree(szArgList);
+
+		// Set mouse hook
+		SetWindowsHookEx(WH_MOUSE_LL, mouseHookProc, GetModuleHandle(NULL), NULL);
         
 		// Hook setcursorpos
 		DetourRestoreAfterWith();

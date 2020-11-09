@@ -1647,15 +1647,15 @@ HRESULT IDirectDrawSurfaceWrapper::WrapperInitialize(LPDDSURFACEDESC lpDDSurface
 
 	//Overallocate the memory to prevent access outside of memory range by the exe
 	//if(!ReInitialize(displayWidth, displayHeight)) return DDERR_OUTOFMEMORY;
-	//maximum supported resolution is 1920x1440
-	rawVideoMem = new BYTE[1920 * 1440];
+	//maximum supported resolution is 2560x1440
+	rawVideoMem = new BYTE[2560 * 1440];
 	if(rawVideoMem == NULL)
 	{
 		debugMessage(0, "IDirectDrawSurfaceWrapper::WrapperInitialize", "Failed to allocate raw video memory");
 		return DDERR_OUTOFMEMORY;
 	}
 	// Clear raw memory
-	ZeroMemory(rawVideoMem, 1920 * 1440 * sizeof(BYTE));
+	ZeroMemory(rawVideoMem, 2560 * 1440 * sizeof(BYTE));
 
 	// Allocate virtual video memory RGB
 	rgbVideoMem = new UINT32[surfaceWidth * surfaceHeight];
