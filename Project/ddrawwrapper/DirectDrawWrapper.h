@@ -118,7 +118,9 @@ private:
 	bool CreateD3DDevice();
 	bool CreateSurfaceTexture();
 	bool ReinitDevice();
-	bool CheckD3DFailure(HRESULT hr, char *location, char *message);
+	void UpdateMouseConfinement();
+	void ConfineMouse();
+	void UnconfineMouse();
 
 	IDirectDrawSurfaceWrapper *lpAttachedSurface;
 

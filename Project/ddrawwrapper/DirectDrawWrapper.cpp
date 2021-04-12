@@ -1,5 +1,6 @@
 #include "DirectDrawWrapper.h"
 #include "resource.h"
+#include <string>
 
 /*******************
 **IUnknown methods**
@@ -1304,7 +1305,7 @@ HRESULT IDirectDrawWrapper::Present()
 		debugMessage(0, "IDirectDrawWrapper::Present","Failed to set texture");
 		return false;
 	}
-	
+
 	// Draw primitive
 	if(d3d9Device->DrawPrimitive(D3DPT_TRIANGLEFAN, 0, 2) != D3D_OK)
 	{
@@ -1528,11 +1529,13 @@ BOOL IDirectDrawWrapper::MenuKey(WPARAM vKey)
 			// We are in the menu
 			inMenu = TRUE;
 		}
+		UpdateMouseConfinement();
 		Present();
 	}
 	else if(vKey == VK_ESCAPE)
 	{
 		inMenu = FALSE;
+		UpdateMouseConfinement();
 		Present();
 	}
 	else if(vKey == VK_DOWN)
@@ -1640,6 +1643,7 @@ BOOL IDirectDrawWrapper::MenuKey(WPARAM vKey)
 		AdjustWindow();
 		CreateD3DDevice();
 		CreateSurfaceTexture();
+		UpdateMouseConfinement();
 		Present();
 
 		// Write changes to ini file
@@ -1929,26 +1933,29 @@ bool IDirectDrawWrapper::CreateD3DDevice()
 	}
 
 	// D3DCREATE_NOWINDOWCHANGES possible for alt+tab and mouse leaving window
+	// But it doesn't work :(
 	// create d3d device with hardware vertex processing if it's available
+	DWORD createFlags = 0;
 	if(d3dcaps.VertexProcessingCaps != 0)
 	{
-		if(d3d9Object->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presParams, &d3d9Device) != D3D_OK)
-		{
-			debugMessage(0, "IDirectDrawWrapper::createD3DDevice","Failed to create Direct3D9 device");
-			MessageBox(NULL, TEXT("Failed to create Direct3D9 device."), TEXT("Direct3D9 Device Error"), MB_OK);
-			return false;
-		}
+		createFlags |= D3DCREATE_HARDWARE_VERTEXPROCESSING;
 	}
 	else
 	{
-		if(d3d9Object->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presParams, &d3d9Device) != D3D_OK)
-		{
-			debugMessage(0, "IDirectDrawWrapper::createD3DDevice","Failed to create Direct3D9 device");
-			MessageBox(NULL, TEXT("Failed to create Direct3D9 device."), TEXT("Direct3D9 Device Error"), MB_OK);
-			return false;
-		}
+		createFlags |= D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 	}
 
+	HRESULT returnCode = d3d9Object->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, createFlags, &presParams, &d3d9Device);
+	if (returnCode != D3D_OK)
+	{
+		std::string errorMessage = "Failed to create Direct3D9 device. ";
+		errorMessage += "Error code: ";
+		errorMessage += std::to_string(returnCode);
+		debugMessage(0, "IDirectDrawWrapper::createD3DDevice", const_cast<char *>(errorMessage.c_str()));
+		MessageBoxA(NULL, errorMessage.c_str(), "Direct3D9 Device Error", MB_OK);
+		return false;
+	}
+	
 	// Create menu sprite
 	if(D3DXCreateSprite(d3d9Device, &d3dSprite) != D3D_OK)
 	{
@@ -1959,6 +1966,8 @@ bool IDirectDrawWrapper::CreateD3DDevice()
 
 	debugMessage(2, "IDirectDrawWrapper::createD3DDevice", "Create D3D9 Object");
 	
+	UpdateMouseConfinement();
+
     // Success
 	return true;
 }
@@ -2149,5 +2158,30 @@ bool IDirectDrawWrapper::ReinitDevice()
 
 	// Recreate the surface texutre
 	return CreateSurfaceTexture();
+}
+
+void IDirectDrawWrapper::UpdateMouseConfinement()
+{
+	if (inMenu)
+	{
+		UnconfineMouse();
+	}
+	else
+	{
+		ConfineMouse();
+	}
+}
+
+
+void IDirectDrawWrapper::ConfineMouse()
+{
+	RECT windowRect;
+	GetWindowRect(hWnd, &windowRect);
+	ClipCursor(&windowRect);
+}
+
+void IDirectDrawWrapper::UnconfineMouse()
+{
+	ClipCursor(NULL);
 }
 
